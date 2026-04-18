@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyParents } from "@/lib/notify";
+import { getStudentWithParents } from "@/lib/access";
 import { requireAdmin } from "@/lib/route-middleware";
 
 type IdCtx = { params: Promise<{ id: string }> };
@@ -30,23 +31,18 @@ export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
     });
 
     if (isShared && !existing.isShared) {
-      const parentLinks = await prisma.parentStudent.findMany({
-        where: { studentId: existing.studentId },
-        select: { parentId: true },
-      });
-      const student = await prisma.student.findUnique({
-        where: { id: existing.studentId },
-        select: { name: true },
-      });
-      await notifyParents({
-        parentIds: parentLinks.map((l) => l.parentId),
-        type: "READING",
-        title: "새 독서 기록이 공유되었습니다",
-        content: `${student?.name}의 독서: ${bookTitle}`,
-        sms: notifySms
-          ? { message: `[${student?.name}] 새 독서 기록: ${bookTitle}` }
-          : undefined,
-      });
+      const info = await getStudentWithParents(existing.studentId);
+      if (info) {
+        await notifyParents({
+          parentIds: info.parentIds,
+          type: "READING",
+          title: "새 독서 기록이 공유되었습니다",
+          content: `${info.name}의 독서: ${bookTitle}`,
+          sms: notifySms
+            ? { message: `[${info.name}] 새 독서 기록: ${bookTitle}` }
+            : undefined,
+        });
+      }
     }
 
     return NextResponse.json(record);

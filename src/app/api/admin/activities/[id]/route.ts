@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyParents } from "@/lib/notify";
+import { getStudentWithParents } from "@/lib/access";
 import { requireAdmin } from "@/lib/route-middleware";
 
 type IdCtx = { params: Promise<{ id: string }> };
@@ -40,10 +41,8 @@ export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
 
     // 공유 시 학부모 연결 확인
     if (isShared && !existing.isShared) {
-      const parentLinks = await prisma.parentStudent.findMany({
-        where: { studentId: existing.studentId },
-      });
-      if (parentLinks.length === 0) {
+      const info = await getStudentWithParents(existing.studentId);
+      if (!info || info.parentIds.length === 0) {
         return NextResponse.json({ error: "연결된 학부모가 없어 공유할 수 없습니다." }, { status: 400 });
       }
     }
@@ -81,26 +80,21 @@ export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
 
     const shouldNotify = (wasShared && !isDraft) || (isShared && !wasShared);
     if (shouldNotify) {
-      const parentLinks = await prisma.parentStudent.findMany({
-        where: { studentId: existing.studentId },
-        select: { parentId: true },
-      });
-      const student = await prisma.student.findUnique({
-        where: { id: existing.studentId },
-        select: { name: true },
-      });
-      const isNewShare = isShared && !wasShared;
-      const notifTitle = isNewShare ? "새 활동이 공유되었습니다" : "활동 기록이 수정되었습니다";
-      await notifyParents({
-        parentIds: parentLinks.map((l) => l.parentId),
-        type: "ACTIVITY",
-        title: notifTitle,
-        content: `${student?.name}의 활동: ${title}`,
-        linkUrl: `/parent/activities/${id}`,
-        sms: notifySms
-          ? { message: `[${student?.name}] ${notifTitle}: ${title}` }
-          : undefined,
-      });
+      const info = await getStudentWithParents(existing.studentId);
+      if (info) {
+        const isNewShare = isShared && !wasShared;
+        const notifTitle = isNewShare ? "새 활동이 공유되었습니다" : "활동 기록이 수정되었습니다";
+        await notifyParents({
+          parentIds: info.parentIds,
+          type: "ACTIVITY",
+          title: notifTitle,
+          content: `${info.name}의 활동: ${title}`,
+          linkUrl: `/parent/activities/${id}`,
+          sms: notifySms
+            ? { message: `[${info.name}] ${notifTitle}: ${title}` }
+            : undefined,
+        });
+      }
     }
 
     return NextResponse.json(activity);

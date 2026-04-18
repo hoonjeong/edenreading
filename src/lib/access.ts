@@ -34,3 +34,22 @@ export function studentScopeWhere(ids: string[] | null) {
   if (ids === null) return {};
   return { studentId: { in: ids } };
 }
+
+// 학생의 이름과 연결된 학부모 ID 목록을 1회 쿼리로 조회.
+// activities/reading 공유 알림 전 단골 패턴.
+export async function getStudentWithParents(
+  studentId: string
+): Promise<{ name: string; parentIds: string[] } | null> {
+  const student = await prisma.student.findUnique({
+    where: { id: studentId },
+    select: {
+      name: true,
+      parents: { select: { parentId: true } },
+    },
+  });
+  if (!student) return null;
+  return {
+    name: student.name,
+    parentIds: student.parents.map((p) => p.parentId),
+  };
+}

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyParents } from "@/lib/notify";
-import { canAccessStudent, getAccessibleStudentIds, studentScopeWhere } from "@/lib/access";
+import {
+  canAccessStudent,
+  getAccessibleStudentIds,
+  getStudentWithParents,
+  studentScopeWhere,
+} from "@/lib/access";
 import { requireAdmin } from "@/lib/route-middleware";
 
 export const GET = requireAdmin(async (_request, _ctx, session) => {
@@ -33,12 +38,10 @@ export const POST = requireAdmin(async (request, _ctx, session) => {
     }
 
     // 공유 시 학부모 연결 여부 확인
+    let sharedStudent: { name: string; parentIds: string[] } | null = null;
     if (isShared) {
-      const parentLinks = await prisma.parentStudent.findMany({
-        where: { studentId },
-        include: { parent: true },
-      });
-      if (parentLinks.length === 0) {
+      sharedStudent = await getStudentWithParents(studentId);
+      if (!sharedStudent || sharedStudent.parentIds.length === 0) {
         return NextResponse.json({ error: "연결된 학부모가 없어 공유할 수 없습니다." }, { status: 400 });
       }
     }
@@ -68,23 +71,15 @@ export const POST = requireAdmin(async (request, _ctx, session) => {
       include: { media: true },
     });
 
-    if (isShared) {
-      const parentLinks = await prisma.parentStudent.findMany({
-        where: { studentId },
-        select: { parentId: true },
-      });
-      const student = await prisma.student.findUnique({
-        where: { id: studentId },
-        select: { name: true },
-      });
+    if (isShared && sharedStudent) {
       await notifyParents({
-        parentIds: parentLinks.map((l) => l.parentId),
+        parentIds: sharedStudent.parentIds,
         type: "ACTIVITY",
         title: "새 활동이 공유되었습니다",
-        content: `${student?.name}의 활동: ${title}`,
+        content: `${sharedStudent.name}의 활동: ${title}`,
         linkUrl: `/parent/activities/${activity.id}`,
         sms: notifySms
-          ? { message: `[${student?.name}] 새 활동이 공유되었습니다: ${title}` }
+          ? { message: `[${sharedStudent.name}] 새 활동이 공유되었습니다: ${title}` }
           : undefined,
       });
     }
