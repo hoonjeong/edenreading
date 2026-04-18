@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateAuthCode } from "@/lib/utils";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 type IdCtx = { params: Promise<{ id: string }> };
 
@@ -48,8 +49,7 @@ export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
 
     return NextResponse.json(parent);
   } catch (error) {
-    console.error("Parent update error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Parent update error");
   }
 });
 
@@ -60,8 +60,7 @@ export const DELETE = requireAdmin(async (_request, { params }: IdCtx) => {
     await prisma.parent.delete({ where: { id } });
     return NextResponse.json({ message: "학부모가 삭제되었습니다." });
   } catch (error) {
-    console.error("Parent delete error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Parent delete error");
   }
 });
 

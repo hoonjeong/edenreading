@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireParent } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 export const GET = requireParent(async (_request, _ctx, session) => {
   const parent = await prisma.parent.findUnique({
@@ -50,7 +51,6 @@ export const PUT = requireParent(async (request, _ctx, session) => {
 
     return NextResponse.json({ message: "정보가 수정되었습니다." });
   } catch (error) {
-    console.error("Parent mypage update error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Parent mypage update error");
   }
 });

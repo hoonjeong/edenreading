@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyParents } from "@/lib/notify";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 type IdCtx = { params: Promise<{ id: string }> };
 
@@ -120,7 +121,6 @@ export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
       parentsNotified: notifiedCount,
     });
   } catch (error) {
-    console.error("Questions update error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Questions update error");
   }
 });

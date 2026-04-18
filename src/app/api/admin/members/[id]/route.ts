@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 type IdCtx = { params: Promise<{ id: string }> };
 
@@ -25,8 +26,7 @@ export const PUT = requireAdmin(
 
       return NextResponse.json(admin);
     } catch (error) {
-      console.error("Admin update error:", error);
-      return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+      return handleApiError(error, "Admin update error");
     }
   },
   { directorOnly: true }
@@ -54,8 +54,7 @@ export const DELETE = requireAdmin(
       await prisma.admin.delete({ where: { id } });
       return NextResponse.json({ message: "관리자가 삭제되었습니다." });
     } catch (error) {
-      console.error("Admin delete error:", error);
-      return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+      return handleApiError(error, "Admin delete error");
     }
   },
   { directorOnly: true }

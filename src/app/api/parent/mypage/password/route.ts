@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { requireParent } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 export const PUT = requireParent(async (request, _ctx, session) => {
   try {
@@ -36,7 +37,6 @@ export const PUT = requireParent(async (request, _ctx, session) => {
 
     return NextResponse.json({ message: "비밀번호가 변경되었습니다." });
   } catch (error) {
-    console.error("Password change error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Password change error");
   }
 });

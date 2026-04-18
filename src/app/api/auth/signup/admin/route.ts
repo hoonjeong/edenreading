@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { handleApiError } from "@/lib/errors";
 
 export async function POST(request: Request) {
   try {
@@ -38,7 +39,6 @@ export async function POST(request: Request) {
         : "계정이 생성되었습니다. 원장의 승인 후 이용 가능합니다.",
     });
   } catch (error) {
-    console.error("Admin signup error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Admin signup error");
   }
 }

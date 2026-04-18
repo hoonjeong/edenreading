@@ -3,6 +3,7 @@ import { ClassStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { classDataFromBody } from "./_helpers";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 export const GET = requireAdmin(async () => {
   const classes = await prisma.class.findMany({
@@ -34,7 +35,6 @@ export const POST = requireAdmin(async (request) => {
 
     return NextResponse.json(created);
   } catch (error) {
-    console.error("Class create error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Class create error");
   }
 });

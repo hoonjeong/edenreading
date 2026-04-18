@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notifyParents } from "@/lib/notify";
 import { getStudentWithParents } from "@/lib/access";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 type IdCtx = { params: Promise<{ id: string }> };
 
@@ -99,8 +100,7 @@ export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
 
     return NextResponse.json(activity);
   } catch (error) {
-    console.error("Activity update error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Activity update error");
   }
 });
 
@@ -111,7 +111,6 @@ export const DELETE = requireAdmin(async (_request, { params }: IdCtx) => {
     await prisma.activity.delete({ where: { id } });
     return NextResponse.json({ message: "활동이 삭제되었습니다." });
   } catch (error) {
-    console.error("Activity delete error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Activity delete error");
   }
 });

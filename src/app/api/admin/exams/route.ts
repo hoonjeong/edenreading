@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAccessibleStudentIds } from "@/lib/access";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 export const GET = requireAdmin(async (_request, _ctx, session) => {
   const accessible = await getAccessibleStudentIds(session);
@@ -67,7 +68,6 @@ export const POST = requireAdmin(async (request, _ctx, session) => {
 
     return NextResponse.json(exam);
   } catch (error) {
-    console.error("Exam create error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Exam create error");
   }
 });

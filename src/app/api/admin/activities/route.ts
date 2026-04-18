@@ -8,6 +8,7 @@ import {
   studentScopeWhere,
 } from "@/lib/access";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 export const GET = requireAdmin(async (_request, _ctx, session) => {
   const accessible = await getAccessibleStudentIds(session);
@@ -86,7 +87,6 @@ export const POST = requireAdmin(async (request, _ctx, session) => {
 
     return NextResponse.json(activity);
   } catch (error) {
-    console.error("Activity create error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Activity create error");
   }
 });

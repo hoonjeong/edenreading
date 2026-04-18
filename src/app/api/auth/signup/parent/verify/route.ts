@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { handleApiError } from "@/lib/errors";
 
 export async function POST(request: Request) {
   try {
@@ -33,7 +34,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Parent verify error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Parent verify error");
   }
 }

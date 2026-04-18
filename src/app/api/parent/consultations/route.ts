@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireParent } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 export const POST = requireParent(async (request, _ctx, session) => {
   try {
@@ -48,7 +49,6 @@ export const POST = requireParent(async (request, _ctx, session) => {
 
     return NextResponse.json({ message: "상담 요청이 접수되었습니다." });
   } catch (error) {
-    console.error("Consultation create error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Consultation create error");
   }
 });

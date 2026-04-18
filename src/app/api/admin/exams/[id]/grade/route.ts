@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyParents } from "@/lib/notify";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 type IdCtx = { params: Promise<{ id: string }> };
 
@@ -102,7 +103,6 @@ export const POST = requireAdmin(async (request, { params }: IdCtx) => {
 
     return NextResponse.json({ totalScore, message: "채점이 완료되었습니다." });
   } catch (error) {
-    console.error("Grade error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Grade error");
   }
 });

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notifyParents } from "@/lib/notify";
 import { getStudentWithParents } from "@/lib/access";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 type IdCtx = { params: Promise<{ id: string }> };
 
@@ -47,8 +48,7 @@ export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
 
     return NextResponse.json(record);
   } catch (error) {
-    console.error("Reading update error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Reading update error");
   }
 });
 
@@ -59,7 +59,6 @@ export const DELETE = requireAdmin(async (_request, { params }: IdCtx) => {
     await prisma.readingRecord.delete({ where: { id } });
     return NextResponse.json({ message: "독서 기록이 삭제되었습니다." });
   } catch (error) {
-    console.error("Reading delete error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Reading delete error");
   }
 });

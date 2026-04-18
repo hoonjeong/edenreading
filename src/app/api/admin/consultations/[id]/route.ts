@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 type IdCtx = { params: Promise<{ id: string }> };
 
@@ -39,7 +40,6 @@ export const PUT = requireAdmin(async (request, { params }: IdCtx, session) => {
 
     return NextResponse.json(consultation);
   } catch (error) {
-    console.error("Consultation update error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Consultation update error");
   }
 });

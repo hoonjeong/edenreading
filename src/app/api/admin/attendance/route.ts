@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessStudent, getAccessibleStudentIds, studentScopeWhere } from "@/lib/access";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 export const GET = requireAdmin(async (request, _ctx, session) => {
   const url = new URL(request.url);
@@ -75,7 +76,6 @@ export const POST = requireAdmin(async (request, _ctx, session) => {
 
     return NextResponse.json({ message: "출석 기록이 저장되었습니다." });
   } catch (error) {
-    console.error("Attendance error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Attendance error");
   }
 });

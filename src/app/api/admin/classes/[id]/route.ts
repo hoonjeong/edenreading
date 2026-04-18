@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { classDataFromBody } from "../_helpers";
 import { requireAdmin } from "@/lib/route-middleware";
+import { handleApiError } from "@/lib/errors";
 
 type IdCtx = { params: Promise<{ id: string }> };
 
@@ -57,8 +58,7 @@ export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Class update error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Class update error");
   }
 });
 
@@ -69,7 +69,6 @@ export const DELETE = requireAdmin(async (_request, { params }: IdCtx) => {
     await prisma.class.delete({ where: { id } });
     return NextResponse.json({ message: "수업이 삭제되었습니다." });
   } catch (error) {
-    console.error("Class delete error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Class delete error");
   }
 });

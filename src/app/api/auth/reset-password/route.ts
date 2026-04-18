@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { handleApiError } from "@/lib/errors";
 
 // 비밀번호 초기화 (관리자: 이메일 + 전화번호로 본인 확인)
 export async function POST(request: Request) {
@@ -52,7 +53,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   } catch (error) {
-    console.error("Reset password error:", error);
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+    return handleApiError(error, "Reset password error");
   }
 }
