@@ -1,0 +1,107 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { notifyParents } from "@/lib/notify";
+import { canAccessStudent, getAccessibleStudentIds, studentScopeWhere } from "@/lib/access";
+
+export async function GET() {
+  const session = await auth();
+  if (!session || session.user.userType !== "admin") {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
+  }
+
+  const accessible = await getAccessibleStudentIds(session);
+  const activities = await prisma.activity.findMany({
+    where: studentScopeWhere(accessible),
+    include: {
+      student: true,
+      admin: true,
+      media: { orderBy: { sortOrder: "asc" } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json(activities);
+}
+
+export async function POST(request: Request) {
+  const session = await auth();
+  if (!session || session.user.userType !== "admin") {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
+  }
+
+  try {
+    const { studentId, title, content, activityDate, isDraft, isShared, media, notifySms } =
+      await request.json();
+
+    if (!studentId || !title) {
+      return NextResponse.json({ error: "학생과 제목은 필수입니다." }, { status: 400 });
+    }
+
+    if (!(await canAccessStudent(session, studentId))) {
+      return NextResponse.json({ error: "담당 학생이 아닙니다." }, { status: 403 });
+    }
+
+    // 공유 시 학부모 연결 여부 확인
+    if (isShared) {
+      const parentLinks = await prisma.parentStudent.findMany({
+        where: { studentId },
+        include: { parent: true },
+      });
+      if (parentLinks.length === 0) {
+        return NextResponse.json({ error: "연결된 학부모가 없어 공유할 수 없습니다." }, { status: 400 });
+      }
+    }
+
+    const activity = await prisma.activity.create({
+      data: {
+        studentId,
+        adminId: session.user.id,
+        title,
+        content: content || null,
+        activityDate: activityDate ? new Date(activityDate) : new Date(),
+        isDraft: isDraft ?? true,
+        isShared: isShared ?? false,
+        sharedAt: isShared ? new Date() : null,
+        media: media?.length
+          ? {
+              create: media.map((m: { url: string; fileName: string; fileSize: number; type: string }, i: number) => ({
+                type: m.type,
+                url: m.url,
+                fileName: m.fileName,
+                fileSize: m.fileSize,
+                sortOrder: i,
+              })),
+            }
+          : undefined,
+      },
+      include: { media: true },
+    });
+
+    if (isShared) {
+      const parentLinks = await prisma.parentStudent.findMany({
+        where: { studentId },
+        select: { parentId: true },
+      });
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+        select: { name: true },
+      });
+      await notifyParents({
+        parentIds: parentLinks.map((l) => l.parentId),
+        type: "ACTIVITY",
+        title: "새 활동이 공유되었습니다",
+        content: `${student?.name}의 활동: ${title}`,
+        linkUrl: `/parent/activities/${activity.id}`,
+        sms: notifySms
+          ? { message: `[${student?.name}] 새 활동이 공유되었습니다: ${title}` }
+          : undefined,
+      });
+    }
+
+    return NextResponse.json(activity);
+  } catch (error) {
+    console.error("Activity create error:", error);
+    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
+  }
+}

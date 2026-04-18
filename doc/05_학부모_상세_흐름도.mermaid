@@ -1,0 +1,94 @@
+%% ====================================================
+%% 학부모 상세 흐름도 (Level 2)
+%% 학부모가 모바일/PC에서 사용하는 모든 흐름
+%% ====================================================
+
+flowchart TD
+    Entry([서비스 진입<br/>카톡 안내 링크 또는 직접 접속]) --> HasAccount{계정 보유?}
+
+    %% ===== 1. 가입 흐름 =====
+    HasAccount -- 신규 --> Signup[가입 시작]
+    Signup --> CodeInput[인증코드 6자리 입력]
+    CodeInput --> CodeCheck{코드 유효?}
+    CodeCheck -- 무효 --> CodeError[오류 안내<br/>교육원 문의 안내]
+    CodeError --> CodeInput
+    CodeCheck -- 유효 --> InfoConfirm[등록된 학부모 정보 확인<br/>이름/휴대폰 일치 확인]
+    InfoConfirm --> PwSet[비밀번호 설정]
+    PwSet --> TermsAgree[이용약관 동의]
+    TermsAgree --> SignupDone[가입 완료]
+
+    HasAccount -- 보유 --> LoginPage[로그인]
+    LoginPage --> LoginCheck{로그인 성공?}
+    LoginCheck -- 실패 --> LoginError[오류 안내<br/>비밀번호 재설정 안내]
+    LoginError --> LoginPage
+    LoginCheck -- 성공 --> Home
+
+    SignupDone --> Home[학부모 홈<br/>자녀 카드 + 최신 알림 표시]
+
+    %% ===== 2. 자녀별 활동 확인 =====
+    Home --> ChildSelect{자녀가 여러 명?}
+    ChildSelect -- 1명 --> ChildHome[자녀 상세 홈]
+    ChildSelect -- 다수 --> ChildList[자녀 선택]
+    ChildList --> ChildHome
+
+    ChildHome --> V1[주간 활동 보기]
+    V1 --> V1a[활동 카드 목록<br/>최신순]
+    V1a --> V1b[카드 탭 → 사진/영상/글 상세]
+    V1b --> V1c[좋아요/댓글 - 선택 기능]
+
+    ChildHome --> V2[시험 리포트 보기]
+    V2 --> V2a[회차 목록 표시]
+    V2a --> V2b[회차 선택]
+    V2b --> V2c[종합 점수 + 영역별 그래프]
+    V2c --> V2d[회차별 추이 라인 그래프]
+    V2d --> V2e[선생님 코멘트]
+    V2e --> V2f{상담 필요?}
+    V2f -- 예 --> V2g[상담 신청 화면 이동]
+
+    ChildHome --> V3[독서 기록 보기]
+    V3 --> V3a[기간 필터 선택]
+    V3a --> V3b[책 카드 목록 표시]
+    V3b --> V3c[책 선택 → 독서 활동 사진/소감 확인]
+
+    ChildHome --> V4[출석 확인]
+    V4 --> V4a[월별 출결 캘린더]
+    V4a --> V4b[일별 상세 - 출석/지각/결석]
+
+    %% ===== 3. 메시지 / 알림 =====
+    Home --> N1[알림 센터]
+    N1 --> N1a[수신 알림 목록]
+    N1a --> N1b[알림 탭 → 해당 화면 이동]
+
+    Home --> N2[메시지함]
+    N2 --> N2a[교육원에서 받은 메시지 목록]
+    N2a --> N2b[메시지 상세 보기]
+
+    %% ===== 4. 상담 =====
+    Home --> CS1[상담]
+    CS1 --> CS1a[상담 신청]
+    CS1a --> CS1b[희망 일시 + 문의 내용 입력]
+    CS1b --> CS1c[신청 완료 → 관리자에게 알림]
+
+    CS1 --> CS2[상담 이력 조회]
+    CS2 --> CS2a[과거 상담 목록]
+    CS2a --> CS2b[상담 내용 상세 보기]
+
+    %% ===== 5. 내 정보 =====
+    Home --> P1[내 정보]
+    P1 --> P1a[기본 정보 수정<br/>휴대폰/이메일]
+    P1 --> P1b[비밀번호 변경]
+    P1 --> P1c[알림 수신 설정]
+    P1 --> P1d[연동 자녀 목록 확인<br/>추가는 관리자에게 요청]
+
+    %% ===== 스타일 =====
+    classDef start fill:#FFF3E0,stroke:#F57C00,stroke-width:2px,color:#E65100
+    classDef main fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F
+    classDef view fill:#F1F8E9,stroke:#558B2F,stroke-width:1px,color:#33691E
+    classDef decision fill:#FFF9C4,stroke:#F9A825,stroke-width:2px,color:#F57F17
+    classDef error fill:#FFEBEE,stroke:#D32F2F,stroke-width:2px,color:#B71C1C
+
+    class Entry,Signup,LoginPage start
+    class Home,ChildHome,V1,V2,V3,V4,N1,N2,CS1,P1 main
+    class V1a,V1b,V1c,V2a,V2b,V2c,V2d,V2e,V3a,V3b,V3c,V4a,V4b,N1a,N1b,N2a,N2b view
+    class HasAccount,CodeCheck,LoginCheck,ChildSelect,V2f decision
+    class CodeError,LoginError error

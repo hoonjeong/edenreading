@@ -1,0 +1,86 @@
+%% ====================================================
+%% 시험 시스템 상세 흐름도 v2.0 (실 자료 반영)
+%% 분기 → 시험 → 문항(객관식/서술형) → 채점 → 리포트
+%% ====================================================
+
+flowchart LR
+    %% ===== 영역 색상 그룹 =====
+    subgraph SETUP[시험 준비]
+        direction TB
+        A1[분기 선택<br/>1/2/3/4분기] --> A2[시험 회차 생성]
+        A2 --> A3[기본 정보 입력<br/>시험명·일자·시간]
+    end
+    
+    subgraph QUESTION[문항 등록]
+        direction TB
+        B1{문항 유형}
+        B1 -- 객관식 --> B2[객관식 정보<br/>정답·배점]
+        B1 -- 서술형 --> B3[서술형 정보<br/>총배점]
+        B2 --> B4[영역 선택<br/>7개 중 1개]
+        B3 --> B4
+        B4 --> B5[독해능력 선택<br/>4개 중 1개]
+        B5 --> B6[문항설명 입력]
+        B6 --> B7[풀이·오답분석·교사팁<br/>선택 입력]
+        B3 --> B8[채점기준 등록<br/>평가영역별 단계기준]
+        B8 --> B9[모범답안 등록<br/>1~3개]
+    end
+    
+    subgraph EXAM[응시·채점]
+        direction TB
+        C1[응시자 배정] --> C2[학생별 답안 입력]
+        C2 --> C3{유형별 채점}
+        C3 -- 객관식 --> C4[자동 채점]
+        C3 -- 서술형 --> C5[기준별 부분 점수 입력]
+        C4 --> C6[영역별 자동 집계]
+        C5 --> C6
+        C6 --> C7[독해능력별 자동 집계]
+        C7 --> C8[학급 평균 자동 계산]
+    end
+    
+    subgraph REPORT[리포트 생성]
+        direction TB
+        D1[학생별 개별 리포트]
+        D1 --> D1a[총점·순위]
+        D1 --> D1b[영역별 3단 비교<br/>만점/평균/학생]
+        D1 --> D1c[독해능력별 3단 비교]
+        D1 --> D1d[정오표]
+        D1 --> D1e[회차별 추이]
+        D1 --> D1f[종합의견]
+        
+        D2[관리자 종합 리포트]
+        D2 --> D2a[전체 점수 분포]
+        D2 --> D2b[문항별 정답률]
+        D2 --> D2c[학급별 평균]
+    end
+    
+    subgraph SHARE[공유]
+        direction TB
+        E1[관리자 검토] --> E2[학부모 알림]
+        E2 --> E3[학부모 페이지 게시]
+    end
+    
+    %% ===== 영역 간 연결 =====
+    SETUP --> QUESTION
+    QUESTION --> EXAM
+    EXAM --> REPORT
+    REPORT --> SHARE
+    
+    %% ===== 엑셀 임포트 경로 =====
+    Excel[기존 엑셀 자료] -.임포트.-> QUESTION
+    Excel -.답안 일괄.-> EXAM
+    Excel -.과거 분기.-> REPORT
+    
+    %% ===== 스타일 =====
+    classDef setup fill:#E3F2FD,stroke:#1976D2,stroke-width:2px,color:#0D47A1
+    classDef question fill:#FFF3E0,stroke:#F57C00,stroke-width:2px,color:#E65100
+    classDef exam fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C
+    classDef report fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F
+    classDef share fill:#E8F5E9,stroke:#388E3C,stroke-width:2px,color:#1B5E20
+    classDef excel fill:#FFFDE7,stroke:#F57F17,stroke-width:2px,stroke-dasharray: 5 5,color:#F57F17
+    
+    class A1,A2,A3 setup
+    class B1,B2,B3,B4,B5,B6,B7,B8,B9 question
+    class C1,C2,C3,C4,C5,C6,C7,C8 exam
+    class D1,D2,D1a,D1b,D1c,D1d,D1e,D1f,D2a,D2b,D2c report
+    class E1,E2,E3 share
+    class Excel excel

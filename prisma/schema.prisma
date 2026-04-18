@@ -1,0 +1,578 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// 관리자 (원장/교사)
+// ==========================================
+model Admin {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String
+  password    String
+  role        AdminRole @default(TEACHER)
+  isApproved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastLoginAt DateTime?
+  loginFailCount Int   @default(0)
+  lockedUntil DateTime?
+
+  activities       Activity[]
+  readingRecords   ReadingRecord[]
+  attendances      Attendance[]
+  sentMessages     Message[]
+  messageTemplates MessageTemplate[]
+  consultations    Consultation[]
+  examSessions     ExamSession[]
+  assignedStudents AdminStudent[]
+
+  @@map("admins")
+}
+
+enum AdminRole {
+  DIRECTOR
+  TEACHER
+}
+
+// ==========================================
+// 학부모
+// ==========================================
+model Parent {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String   @unique
+  email       String?
+  password    String?
+  memo        String?  @db.Text
+  authCode    String?  @unique
+  authCodeExpiresAt DateTime?
+  isSignedUp  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastLoginAt DateTime?
+  loginFailCount Int   @default(0)
+  lockedUntil DateTime?
+
+  // 알림 설정
+  notifyKakao Boolean @default(true)
+  notifySms   Boolean @default(true)
+  notifyPush  Boolean @default(true)
+
+  children    ParentStudent[]
+  consultations Consultation[]
+  notifications Notification[]
+
+  @@map("parents")
+}
+
+// ==========================================
+// 학생
+// ==========================================
+model Student {
+  id            String   @id @default(cuid())
+  name          String
+  gender        String?  // 남/여
+  grade         String?
+  school        String?
+  classNo       String?  // 반
+  birthDate     DateTime?
+  studentPhone  String?
+  homePhone     String?
+  specialNotes  String?  @db.Text
+  photoUrl      String?
+  isActive      Boolean  @default(true)
+  enrollDate    DateTime?
+  withdrawDate  DateTime?
+  withdrawReason String?
+  isOnLeave     Boolean  @default(false)
+  leaveReason   String?
+  siblingInfo   String?  // 형제 정보
+  studentCode   String?  // 원생고유번호
+  memo          String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  parents           ParentStudent[]
+  activities        Activity[]
+  readingRecords    ReadingRecord[]
+  attendances       Attendance[]
+  consultations     Consultation[]
+  examinees         Examinee[]
+  classStudents     ClassStudent[]
+  assignedTeachers  AdminStudent[]
+
+  @@map("students")
+}
+
+// ==========================================
+// 수업 관리
+// ==========================================
+model Class {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  category      String?  // 구분 (월별 등)
+  fee           Int      @default(0) // 수업료
+  feePerSession Int?     // 1회당 수업료
+  targetGrade   String?  // 대상
+  teacher       String?  // 담임강사
+  assistantTeacher String? // 보조강사
+  classroom     String?  // 강의실
+  capacity      Int?     // 정원
+  startDate     DateTime?
+  endDate       DateTime?
+  status        ClassStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  students ClassStudent[]
+
+  @@map("classes")
+}
+
+enum ClassStatus {
+  ACTIVE    // 수강
+  INACTIVE  // 종료
+  PAUSED    // 일시중단
+}
+
+model ClassStudent {
+  id        String   @id @default(cuid())
+  classId   String
+  studentId String
+  enrolledAt DateTime @default(now())
+
+  class_  Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId])
+  @@map("class_students")
+}
+
+// ==========================================
+// 관리자-학생 담당 (선생님별 담당 학생, BR-A01)
+// ==========================================
+model AdminStudent {
+  id        String   @id @default(cuid())
+  adminId   String
+  studentId String
+  createdAt DateTime @default(now())
+
+  admin   Admin   @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, studentId])
+  @@index([adminId])
+  @@index([studentId])
+  @@map("admin_students")
+}
+
+// ==========================================
+// 학부모-학생 연결 (N:M)
+// ==========================================
+model ParentStudent {
+  id        String   @id @default(cuid())
+  parentId  String
+  studentId String
+  createdAt DateTime @default(now())
+
+  parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@map("parent_students")
+}
+
+// ==========================================
+// 활동 기록
+// ==========================================
+model Activity {
+  id          String   @id @default(cuid())
+  studentId   String
+  adminId     String
+  title       String
+  content     String?  @db.Text
+  activityDate DateTime
+  isShared    Boolean  @default(false)
+  sharedAt    DateTime?
+  isDraft     Boolean  @default(true)
+  isEdited    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  admin   Admin   @relation(fields: [adminId], references: [id])
+  media   ActivityMedia[]
+
+  @@map("activities")
+}
+
+model ActivityMedia {
+  id         String   @id @default(cuid())
+  activityId String
+  type       MediaType
+  url        String
+  fileName   String?
+  fileSize   Int?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@map("activity_media")
+}
+
+enum MediaType {
+  PHOTO
+  VIDEO
+}
+
+// ==========================================
+// 독서 기록
+// ==========================================
+model ReadingRecord {
+  id           String   @id @default(cuid())
+  studentId    String
+  adminId      String
+  bookTitle    String
+  bookAuthor   String?
+  coverPhotoUrl String?
+  readDate     DateTime
+  teacherNote  String?  @db.Text
+  isShared     Boolean  @default(false)
+  sharedAt     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  admin   Admin   @relation(fields: [adminId], references: [id])
+  photos  ReadingPhoto[]
+
+  @@map("reading_records")
+}
+
+model ReadingPhoto {
+  id              String @id @default(cuid())
+  readingRecordId String
+  url             String
+  sortOrder       Int    @default(0)
+  createdAt       DateTime @default(now())
+
+  readingRecord ReadingRecord @relation(fields: [readingRecordId], references: [id], onDelete: Cascade)
+
+  @@map("reading_photos")
+}
+
+// ==========================================
+// 출결 관리
+// ==========================================
+model Attendance {
+  id        String   @id @default(cuid())
+  studentId String
+  adminId   String
+  date      DateTime @db.Date
+  status    AttendanceStatus @default(PRESENT)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  admin   Admin   @relation(fields: [adminId], references: [id])
+
+  @@unique([studentId, date])
+  @@map("attendances")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  TARDY
+}
+
+// ==========================================
+// 시험 시스템
+// ==========================================
+model ExamSession {
+  id            String   @id @default(cuid())
+  name          String
+  adminId       String
+  grade         String?
+  quarter       Int?     // 1~4분기
+  examDate      DateTime?
+  duration      Int?     // 분 단위
+  totalScore    Int      @default(0)
+  objectiveCount Int     @default(0)
+  essayCount    Int      @default(0)
+  status        ExamStatus @default(WRITING)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  admin     Admin      @relation(fields: [adminId], references: [id])
+  questions Question[]
+  examinees Examinee[]
+
+  @@map("exam_sessions")
+}
+
+enum ExamStatus {
+  WRITING
+  TESTING
+  GRADING
+  SHARED
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  examSessionId String
+  questionNo    Int
+  type          QuestionType
+  points        Int      @default(0)
+  answer        String?  // 객관식 정답
+  subjectArea   SubjectArea?
+  readingLevel  ReadingLevel?
+  description   String?  @db.Text
+  solution      String?  @db.Text
+  analysis      String?  @db.Text
+  teacherTip    String?  @db.Text
+  problemText   String?  @db.Text // 서술형 문제 본문
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  examSession   ExamSession    @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
+  rubrics       Rubric[]
+  modelAnswers  ModelAnswer[]
+  studentAnswers StudentAnswer[]
+
+  @@unique([examSessionId, questionNo])
+  @@map("questions")
+}
+
+enum QuestionType {
+  OBJECTIVE
+  ESSAY
+}
+
+enum SubjectArea {
+  LISTENING_SPEAKING  // 듣기말하기
+  VOCABULARY          // 어휘
+  GRAMMAR             // 문법
+  READING             // 읽기
+  WRITING             // 쓰기
+  LITERATURE          // 문학
+  MEDIA               // 매체
+}
+
+enum ReadingLevel {
+  FACTUAL             // 사실적
+  INFERENTIAL         // 추론적
+  RECEPTIVE_PRODUCTIVE // 수용과생산
+  LITERARY_UNDERSTANDING // 작품이해
+}
+
+model Rubric {
+  id          String @id @default(cuid())
+  questionId  String
+  domainName  String   // 평가 영역명
+  points      Int
+  criteria    String?  @db.Text // JSON: 단계별 기준
+  sortOrder   Int      @default(0)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("rubrics")
+}
+
+model ModelAnswer {
+  id         String @id @default(cuid())
+  questionId String
+  type       ModelAnswerType
+  content    String @db.Text
+  sortOrder  Int    @default(0)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("model_answers")
+}
+
+enum ModelAnswerType {
+  EXCELLENT   // 우수답안
+  AVERAGE     // 보통답안
+  INSUFFICIENT // 미흡답안
+}
+
+// 시험 응시자
+model Examinee {
+  id            String   @id @default(cuid())
+  examSessionId String
+  studentId     String
+  totalScore    Int?
+  isAbsent      Boolean  @default(false)
+  teacherComment String? @db.Text
+  commentType   CommentType @default(PARENT_VISIBLE)
+  isShared      Boolean  @default(false)
+  sharedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  examSession ExamSession     @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
+  student     Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers     StudentAnswer[]
+
+  @@unique([examSessionId, studentId])
+  @@map("examinees")
+}
+
+enum CommentType {
+  INTERNAL_ONLY
+  PARENT_VISIBLE
+}
+
+model StudentAnswer {
+  id         String   @id @default(cuid())
+  examineeId String
+  questionId String
+  answer     String?  @db.Text
+  score      Int?
+  isCorrect  Boolean?
+  isAnswered Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  examinee Examinee @relation(fields: [examineeId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([examineeId, questionId])
+  @@map("student_answers")
+}
+
+// ==========================================
+// 메시지/알림
+// ==========================================
+model Message {
+  id            String   @id @default(cuid())
+  adminId       String
+  channel       MessageChannel
+  msgType       SmsType  @default(SMS)
+  title         String?
+  content       String   @db.Text
+  senderPhone   String?
+  recipientCount Int     @default(0)
+  successCount  Int      @default(0)
+  failCount     Int      @default(0)
+  resultCode    String?  // Aligo result_code
+  resultMessage String?  // Aligo message
+  testMode      Boolean  @default(false)
+  sentAt        DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  admin      Admin              @relation(fields: [adminId], references: [id])
+  recipients MessageRecipient[]
+
+  @@index([adminId, sentAt])
+  @@map("messages")
+}
+
+model MessageRecipient {
+  id        String   @id @default(cuid())
+  messageId String
+  parentId  String?
+  phone     String
+  name      String?
+  isSuccess Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([phone, createdAt])
+  @@map("message_recipients")
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  adminId   String
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, updatedAt])
+  @@map("message_templates")
+}
+
+enum MessageChannel {
+  KAKAO
+  SMS
+  PUSH
+}
+
+enum SmsType {
+  SMS
+  LMS
+  MMS
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  parentId  String
+  type      NotificationType
+  title     String
+  content   String   @db.Text
+  linkUrl   String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  parent Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  ACTIVITY
+  EXAM
+  READING
+  ATTENDANCE
+  MESSAGE
+  CONSULTATION
+  SYSTEM
+}
+
+// ==========================================
+// 상담 관리
+// ==========================================
+model Consultation {
+  id          String   @id @default(cuid())
+  parentId    String
+  studentId   String
+  adminId     String?
+  desiredDate DateTime?
+  content     String   @db.Text
+  status      ConsultationStatus @default(REQUESTED)
+  adminMemo   String?  @db.Text // 학부모에게 비공개
+  scheduledAt DateTime?
+  completedAt DateTime?
+  summary     String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  admin   Admin?  @relation(fields: [adminId], references: [id])
+
+  @@map("consultations")
+}
+
+enum ConsultationStatus {
+  REQUESTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}

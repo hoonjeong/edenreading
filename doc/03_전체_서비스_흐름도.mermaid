@@ -1,0 +1,55 @@
+%% ====================================================
+%% 이든독서 교육원 관리 시스템 - 전체 서비스 흐름도 (Level 1)
+%% 두 사용자 그룹의 전체 진입 흐름과 핵심 기능 영역을 한눈에 표현
+%% ====================================================
+
+flowchart TD
+    Start([서비스 진입]) --> Login{로그인 상태?}
+
+    Login -- 미로그인 --> UserType{사용자 유형 선택}
+    Login -- 로그인됨 --> Role{역할 분기}
+
+    UserType -- 관리자 --> AdminAuth[관리자 회원가입/로그인]
+    UserType -- 학부모 --> ParentAuth[학부모 인증코드 가입/로그인]
+
+    AdminAuth --> Role
+    ParentAuth --> Role
+
+    Role -- 관리자 --> AdminHome[관리자 대시보드]
+    Role -- 학부모 --> ParentHome[학부모 홈 - 자녀 카드 표시]
+
+    %% ===== 관리자 영역 =====
+    AdminHome --> A1[회원/조직 관리]
+    AdminHome --> A2[학부모/학생 관리]
+    AdminHome --> A3[활동 기록 관리]
+    AdminHome --> A4[시험 관리]
+    AdminHome --> A5[독서 기록 관리]
+    AdminHome --> A6[학부모 소통 - 메시지/상담]
+    AdminHome --> A7[출석 관리]
+
+    %% ===== 학부모 영역 =====
+    ParentHome --> P1[내 정보/자녀 정보]
+    ParentHome --> P2[자녀 활동 보기]
+    ParentHome --> P3[시험 리포트 보기]
+    ParentHome --> P4[독서 기록 보기]
+    ParentHome --> P5[메시지/알림 확인]
+    ParentHome --> P6[상담 신청/이력]
+    ParentHome --> P7[출석 확인]
+
+    %% ===== 데이터 연동 표시 =====
+    A3 -.공유.-> P2
+    A4 -.공유.-> P3
+    A5 -.공유.-> P4
+    A6 -.발송.-> P5
+    A7 -.공유.-> P7
+
+    %% ===== 스타일 =====
+    classDef adminBox fill:#E3F2FD,stroke:#1976D2,stroke-width:2px,color:#0D47A1
+    classDef parentBox fill:#FFF3E0,stroke:#F57C00,stroke-width:2px,color:#E65100
+    classDef startBox fill:#E8F5E9,stroke:#388E3C,stroke-width:2px,color:#1B5E20
+    classDef decisionBox fill:#FFF9C4,stroke:#F9A825,stroke-width:2px,color:#F57F17
+
+    class Start,AdminAuth,ParentAuth startBox
+    class Login,UserType,Role decisionBox
+    class AdminHome,A1,A2,A3,A4,A5,A6,A7 adminBox
+    class ParentHome,P1,P2,P3,P4,P5,P6,P7 parentBox
