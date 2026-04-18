@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { MessageChannel, SmsType } from "@prisma/client";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { detectMsgType, sendAligoSms, type AligoMsgType } from "@/lib/aligo";
+import { requireAdmin } from "@/lib/route-middleware";
 
 interface SendBody {
   parentIds?: string[];
@@ -13,12 +13,7 @@ interface SendBody {
   testMode?: boolean;
 }
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const POST = requireAdmin(async (request, _ctx, session) => {
   let body: SendBody;
   try {
     body = await request.json();
@@ -143,4 +138,4 @@ export async function POST(request: Request) {
       ? `야간시간(21:00~08:00) 차단으로 ${aligo.scheduled.rdate} ${aligo.scheduled.rtime}에 예약 발송됩니다.`
       : aligo.resultMessage,
   });
-}
+});

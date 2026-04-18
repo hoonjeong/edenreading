@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessStudent, getAccessibleStudentIds, studentScopeWhere } from "@/lib/access";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function GET(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const GET = requireAdmin(async (request, _ctx, session) => {
   const url = new URL(request.url);
   const date = url.searchParams.get("date");
 
@@ -23,14 +18,9 @@ export async function GET(request: Request) {
   });
 
   return NextResponse.json(attendances);
-}
+});
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const POST = requireAdmin(async (request, _ctx, session) => {
   try {
     const { date, records } = await request.json();
 
@@ -88,4 +78,4 @@ export async function POST(request: Request) {
     console.error("Attendance error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});

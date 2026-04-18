@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/route-middleware";
+
+type IdCtx = { params: Promise<{ id: string }> };
 
 // 문항별 정답률, 영역별 평균 정답률 등 시험 통계
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const GET = requireAdmin(async (_request, { params }: IdCtx) => {
   const { id } = await params;
 
   const [questions, answers, examineeCount] = await Promise.all([
@@ -97,4 +91,4 @@ export async function GET(
     questions: stats,
     areaAverages,
   });
-}
+});

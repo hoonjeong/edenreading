@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function GET(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const GET = requireAdmin(async (request, _ctx, session) => {
   const { searchParams } = new URL(request.url);
   const mineOnly = searchParams.get("mine") === "true";
   const take = Math.min(Number(searchParams.get("take") || 30), 100);
@@ -33,4 +28,4 @@ export async function GET(request: Request) {
   });
 
   return NextResponse.json(messages);
-}
+});

@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { requireParent } from "@/lib/route-middleware";
 
-export async function PUT(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "parent") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const PUT = requireParent(async (request, _ctx, session) => {
   try {
     const { currentPassword, newPassword } = await request.json();
 
@@ -44,4 +39,4 @@ export async function PUT(request: Request) {
     console.error("Password change error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});

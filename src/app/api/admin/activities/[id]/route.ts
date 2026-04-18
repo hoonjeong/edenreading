@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notifyParents } from "@/lib/notify";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session) {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
+type IdCtx = { params: Promise<{ id: string }> };
 
+export const GET = requireAdmin(async (_request, { params }: IdCtx) => {
   const { id } = await params;
   const activity = await prisma.activity.findUnique({
     where: { id },
@@ -27,17 +21,9 @@ export async function GET(
   }
 
   return NextResponse.json(activity);
-}
+});
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
   const { id } = await params;
 
   try {
@@ -122,17 +108,9 @@ export async function PUT(
     console.error("Activity update error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const DELETE = requireAdmin(async (_request, { params }: IdCtx) => {
   const { id } = await params;
 
   try {
@@ -142,4 +120,4 @@ export async function DELETE(
     console.error("Activity delete error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});

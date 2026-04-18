@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getAccessibleStudentIds } from "@/lib/access";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function GET() {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const GET = requireAdmin(async (_request, _ctx, session) => {
   const accessible = await getAccessibleStudentIds(session);
   // TEACHER: 본인이 출제했거나 담당 학생이 응시한 시험만
   const where =
@@ -28,14 +23,9 @@ export async function GET() {
   });
 
   return NextResponse.json(exams);
-}
+});
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const POST = requireAdmin(async (request, _ctx, session) => {
   try {
     const { name, grade, quarter, examDate, duration, objectiveCount, essayCount } = await request.json();
 
@@ -80,4 +70,4 @@ export async function POST(request: Request) {
     console.error("Exam create error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});

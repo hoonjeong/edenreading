@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessStudent } from "@/lib/access";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
+type IdCtx = { params: Promise<{ id: string }> };
 
+export const GET = requireAdmin(async (_request, { params }: IdCtx, session) => {
   const { id } = await params;
   if (!(await canAccessStudent(session, id))) {
     return NextResponse.json({ error: "담당 학생이 아닙니다." }, { status: 403 });
@@ -29,17 +23,9 @@ export async function GET(
   }
 
   return NextResponse.json(student);
-}
+});
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
   const { id } = await params;
 
   try {
@@ -103,17 +89,9 @@ export async function PUT(
     console.error("Student update error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const DELETE = requireAdmin(async (_request, { params }: IdCtx) => {
   const { id } = await params;
 
   try {
@@ -123,4 +101,4 @@ export async function DELETE(
     console.error("Student delete error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});

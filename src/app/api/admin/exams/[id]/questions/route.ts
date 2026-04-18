@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notifyParents } from "@/lib/notify";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
+type IdCtx = { params: Promise<{ id: string }> };
 
+export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
   const { id } = await params;
 
   try {
@@ -129,4 +123,4 @@ export async function PUT(
     console.error("Questions update error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});

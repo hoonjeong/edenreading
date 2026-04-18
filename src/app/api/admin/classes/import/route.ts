@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { ClassStatus } from "@prisma/client";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   parseExcel,
@@ -10,6 +9,7 @@ import {
   numOrNull,
   parseExcelDate,
 } from "@/lib/excel";
+import { requireAdmin } from "@/lib/route-middleware";
 
 function mapStatus(v: unknown): ClassStatus {
   const s = str(v);
@@ -18,12 +18,7 @@ function mapStatus(v: unknown): ClassStatus {
   return ClassStatus.ACTIVE;
 }
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const POST = requireAdmin(async (request) => {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -98,4 +93,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

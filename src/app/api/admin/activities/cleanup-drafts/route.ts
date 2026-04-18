@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/route-middleware";
 
 const DRAFT_TTL_DAYS = 7;
 
@@ -37,16 +38,11 @@ export async function POST(request: Request) {
 }
 
 // 미리 보기용: 삭제될 항목 수 조회
-export async function GET() {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const GET = requireAdmin(async () => {
   const cutoff = new Date(Date.now() - DRAFT_TTL_DAYS * 24 * 60 * 60 * 1000);
   const count = await prisma.activity.count({
     where: { isDraft: true, updatedAt: { lt: cutoff } },
   });
 
   return NextResponse.json({ count, cutoff: cutoff.toISOString(), ttlDays: DRAFT_TTL_DAYS });
-}
+});

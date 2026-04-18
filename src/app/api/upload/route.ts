@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { requireAuth } from "@/lib/route-middleware";
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session) {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const POST = requireAuth(async (request) => {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -50,4 +45,4 @@ export async function POST(request: Request) {
     console.error("Upload error:", error);
     return NextResponse.json({ error: "업로드에 실패했습니다." }, { status: 500 });
   }
-}
+});

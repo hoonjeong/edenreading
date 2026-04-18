@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getAccessibleStudentIds } from "@/lib/access";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function GET(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const GET = requireAdmin(async (request, _ctx, session) => {
   const url = new URL(request.url);
   const q = url.searchParams.get("q") || "";
   if (!q) return NextResponse.json([]);
@@ -25,4 +20,4 @@ export async function GET(request: Request) {
   });
 
   return NextResponse.json(students);
-}
+});

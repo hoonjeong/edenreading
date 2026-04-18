@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
+type IdCtx = { params: Promise<{ id: string }> };
 
+export const PUT = requireAdmin(async (request, { params }: IdCtx, session) => {
   const { id } = await params;
   const { title, content } = await request.json();
   if (!title?.trim() || !content?.trim()) {
@@ -30,17 +24,9 @@ export async function PUT(
     data: { title: title.trim(), content: content.trim() },
   });
   return NextResponse.json(updated);
-}
+});
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const DELETE = requireAdmin(async (_request, { params }: IdCtx, session) => {
   const { id } = await params;
   const tpl = await prisma.messageTemplate.findUnique({
     where: { id },
@@ -52,4 +38,4 @@ export async function DELETE(
 
   await prisma.messageTemplate.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});

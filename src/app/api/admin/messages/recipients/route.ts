@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/route-middleware";
 
 // GET /api/admin/messages/recipients?classIds=a,b,c
 // 선택한 수강반의 학생 + 연결된 학부모를 반환
-export async function GET(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const GET = requireAdmin(async (request) => {
   const { searchParams } = new URL(request.url);
   const raw = searchParams.get("classIds") || "";
   const classIds = raw.split(",").map((s) => s.trim()).filter(Boolean);
@@ -78,4 +73,4 @@ export async function GET(request: Request) {
     classes: classes.map((c) => ({ id: c.id, name: c.name })),
     students,
   });
-}
+});

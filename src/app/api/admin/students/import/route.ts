@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   parseExcel,
@@ -9,6 +8,7 @@ import {
   cleanPhone,
 } from "@/lib/excel";
 import { generateAuthCode } from "@/lib/utils";
+import { requireAdmin } from "@/lib/route-middleware";
 
 interface ImportResult {
   total: number;
@@ -34,12 +34,7 @@ function nextAuthCode(taken: Set<string>): string {
   return generateAuthCode() + Math.random().toString(36).slice(2, 4).toUpperCase();
 }
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const POST = requireAdmin(async (request) => {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -207,4 +202,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

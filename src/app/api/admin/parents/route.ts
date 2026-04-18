@@ -1,28 +1,18 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateAuthCode } from "@/lib/utils";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function GET() {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const GET = requireAdmin(async () => {
   const parents = await prisma.parent.findMany({
     include: { children: { include: { student: true } } },
     orderBy: { createdAt: "desc" },
   });
 
   return NextResponse.json(parents);
-}
+});
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const POST = requireAdmin(async (request) => {
   try {
     const { name, phone, email, memo } = await request.json();
 
@@ -66,4 +56,4 @@ export async function POST(request: Request) {
     console.error("Parent create error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});

@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
+type IdCtx = { params: Promise<{ id: string }> };
 
+export const GET = requireAdmin(async (_request, { params }: IdCtx) => {
   const { id } = await params;
 
   const exam = await prisma.examSession.findUnique({
@@ -29,4 +23,4 @@ export async function GET(
   }
 
   return NextResponse.json(exam);
-}
+});

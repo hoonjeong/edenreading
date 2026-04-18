@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateAuthCode } from "@/lib/utils";
+import { requireAdmin } from "@/lib/route-middleware";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
+type IdCtx = { params: Promise<{ id: string }> };
 
+export const GET = requireAdmin(async (_request, { params }: IdCtx) => {
   const { id } = await params;
   const parent = await prisma.parent.findUnique({
     where: { id },
@@ -23,17 +17,9 @@ export async function GET(
   }
 
   return NextResponse.json(parent);
-}
+});
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const PUT = requireAdmin(async (request, { params }: IdCtx) => {
   const { id } = await params;
 
   try {
@@ -65,17 +51,9 @@ export async function PUT(
     console.error("Parent update error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const DELETE = requireAdmin(async (_request, { params }: IdCtx) => {
   const { id } = await params;
 
   try {
@@ -85,18 +63,10 @@ export async function DELETE(
     console.error("Parent delete error:", error);
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 });
   }
-}
+});
 
 // 인증코드 재발송
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session || session.user.userType !== "admin") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
-  }
-
+export const PATCH = requireAdmin(async (request, { params }: IdCtx) => {
   const { id } = await params;
   const { action } = await request.json();
 
@@ -130,4 +100,4 @@ export async function PATCH(
   }
 
   return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
-}
+});
